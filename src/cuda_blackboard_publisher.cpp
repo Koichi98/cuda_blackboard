@@ -10,7 +10,7 @@ namespace cuda_blackboard
 
 template <typename T>
 CudaBlackboardPublisher<T>::CudaBlackboardPublisher(
-  rclcpp::Node & node, const std::string & topic_name)
+  rclcpp::Node & node, const std::string & topic_name, bool skip_compatible_publisher)
 : node_(node)
 {
   negotiated::NegotiatedPublisherOptions negotiation_options;
@@ -26,10 +26,12 @@ CudaBlackboardPublisher<T>::CudaBlackboardPublisher(
     rclcpp::QoS(1),  //.durability_volatile(),
     pub_options);
 
-  std::string ros_type_name = NegotiationStruct<typename T::ros_type>::supported_type_name;
-  compatible_pub_ =
-    node.create_publisher<typename T::ros_type>(topic_name, rclcpp::SensorDataQoS(), pub_options);
-  negotiated_pub_->add_compatible_publisher(compatible_pub_, ros_type_name, 0.1);
+  if (!skip_compatible_publisher) {
+    std::string ros_type_name = NegotiationStruct<typename T::ros_type>::supported_type_name;
+    compatible_pub_ =
+      node.create_publisher<typename T::ros_type>(topic_name, rclcpp::SensorDataQoS(), pub_options);
+    negotiated_pub_->add_compatible_publisher(compatible_pub_, ros_type_name, 0.1);
+  }
 
   negotiated_pub_->start();
 }
@@ -46,6 +48,7 @@ void CudaBlackboardPublisher<T>::publish(std::unique_ptr<const T> cuda_msg_ptr)
 
   uint64_t instance_id{0};
   bool publish_ros_msg =
+    compatible_pub_ &&
     negotiated_pub_->type_was_negotiated<NegotiationStruct<typename T::ros_type>>() &&
     (compatible_pub_->get_subscription_count() > 0 ||
      compatible_pub_->get_intra_process_subscription_count() > 0);

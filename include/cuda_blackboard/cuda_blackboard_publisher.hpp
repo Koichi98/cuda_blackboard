@@ -17,7 +17,9 @@ template <typename T>
 class CudaBlackboardPublisher
 {
 public:
-  CudaBlackboardPublisher(rclcpp::Node & node, const std::string & topic_name);
+  CudaBlackboardPublisher(
+    rclcpp::Node & node, const std::string & topic_name,
+    bool skip_compatible_publisher = false);
   void publish(std::unique_ptr<const T> msg);
 
   std::size_t get_subscription_count() const;
